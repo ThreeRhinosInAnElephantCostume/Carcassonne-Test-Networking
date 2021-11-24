@@ -1,4 +1,5 @@
 ﻿using System;
+using static Networking;
 
 namespace Carcassonne_Test_Networking
 {
@@ -6,6 +7,7 @@ namespace Carcassonne_Test_Networking
     {
         static void Main(string[] args)
         {
+            var t = MessageType.ERR;
             Console.WriteLine("Hello World!");
         }
     }
