@@ -28,6 +28,28 @@ namespace Carcassonne_Test_Networking
 {
     class Program
     {
+        public class TestServer : NetworkedStateMachine
+        {
+            protected override void Logic()
+            {
+                throw new NotImplementedException();
+            }
+            public TestServer(IPEndPoint relay) : base(relay)
+            {
+
+            }
+        }
+        public class TestPlayer : NetworkedStateMachine
+        {
+            protected override void Logic()
+            {
+                throw new NotImplementedException();
+            }
+            public TestPlayer(IPEndPoint relay) : base(relay)
+            {
+
+            }
+        }
         public static ushort GetFreePort(int startPort)
         {
             int portStartIndex = startPort;
