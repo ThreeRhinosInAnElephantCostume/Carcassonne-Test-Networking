@@ -28,9 +28,30 @@ namespace Carcassonne_Test_Networking
 {
     class Program
     {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RegisterPlayerRequest
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_NAME_LENGTH)]
+            public string name;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RegisterPlayerAnswer
+        {
+            bool Success;
+            int PlayerID;
+        }
         public class TestServer : NetworkedStateMachine
         {
+            
             protected override void Logic()
+            {
+                AwaitConnection().Wait();
+                Console.WriteLine("Server connected");
+                
+
+
+            }
+            protected override void OnConnectionLost(NetConnectionErrorException ex)
             {
                 throw new NotImplementedException();
             }
@@ -41,10 +62,47 @@ namespace Carcassonne_Test_Networking
         }
         public class TestPlayer : NetworkedStateMachine
         {
+            public enum NetPlayerState
+            {
+                ERROR=0,
+                DISCONNECTED,
+                CONNECTING,
+                RECEIVING_INITIAL_STATE,
+                LOBBY,
+                LOADING,
+                SYNCHRONIZING,
+                MAKE_MOVE,
+                AWAIT_MOVE,
+            }
+            public Action<NetPlayerState> OnStateChanged = nps => {};
+            NetPlayerState _state = NetPlayerState.ERROR;
+            public NetPlayerState State
+            {
+                get => _state;
+                protected set 
+                {
+                    if(_state != value)
+                    {
+                        OnStateChanged(value);
+                        Console.WriteLine($"State changed from {_state} to {value}");
+                    }
+                    _state = value;
+                }
+            }
             protected override void Logic()
             {
-                throw new NotImplementedException();
+                State = NetPlayerState.CONNECTING;
+                AwaitConnection().Wait();
+                Console.WriteLine("Client connected");
+                
+                State = NetPlayerState.RECEIVING_INITIAL_STATE;
             }
+
+            protected override void OnConnectionLost(NetConnectionErrorException ex)
+            {
+                State = NetPlayerState.DISCONNECTED;
+            }
+
             public TestPlayer(IPEndPoint relay) : base(relay)
             {
 
