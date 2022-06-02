@@ -37,8 +37,13 @@ namespace Carcassonne_Test_Networking
         [StructLayout(LayoutKind.Sequential)]
         public struct RegisterPlayerAnswer
         {
-            bool Success;
-            int PlayerID;
+            public bool Success;
+            public int PlayerID;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct InitialState // simplified to assume that we start in a lobby
+        {
+            
         }
         public class TestServer : NetworkedStateMachine
         {
@@ -55,9 +60,9 @@ namespace Carcassonne_Test_Networking
             {
                 throw new NotImplementedException();
             }
-            public TestServer(IPEndPoint relay) : base(relay)
+            public TestServer(IPEndPoint relay, string password, string adminpassword) : base(relay, password, true, adminpassword)
             {
-
+                
             }
         }
         public class TestPlayer : NetworkedStateMachine
@@ -74,6 +79,8 @@ namespace Carcassonne_Test_Networking
                 MAKE_MOVE,
                 AWAIT_MOVE,
             }
+            int PlayerID = -1;
+            public string Name {get; protected set;}
             public Action<NetPlayerState> OnStateChanged = nps => {};
             NetPlayerState _state = NetPlayerState.ERROR;
             public NetPlayerState State
@@ -89,13 +96,27 @@ namespace Carcassonne_Test_Networking
                     _state = value;
                 }
             }
-            protected override void Logic()
+            protected override async void Logic()
             {
                 State = NetPlayerState.CONNECTING;
                 AwaitConnection().Wait();
                 Console.WriteLine("Client connected");
-                
-                State = NetPlayerState.RECEIVING_INITIAL_STATE;
+                if(_admin == null)
+                    Thread.Sleep(1000);
+                if(_admin == null)
+                    throw new NetConnectionTimeoutException("Could not find admin!");
+                { // register player
+                    var RPA = await
+                        SendAndAwaitResponse<RegisterPlayerRequest, RegisterPlayerAnswer>(_admin, new RegisterPlayerRequest()
+                        {
+                            name = Name,
+                        });
+                    if(!RPA.Success)
+                        throw new NetConnectionErrorException("Rejected registration request!");
+                    this.PlayerID = RPA.PlayerID;
+                    State = NetPlayerState.RECEIVING_INITIAL_STATE;
+                }
+
             }
 
             protected override void OnConnectionLost(NetConnectionErrorException ex)
@@ -103,9 +124,9 @@ namespace Carcassonne_Test_Networking
                 State = NetPlayerState.DISCONNECTED;
             }
 
-            public TestPlayer(IPEndPoint relay) : base(relay)
+            public TestPlayer(IPEndPoint relay, string name, string password) : base(relay, password, false)
             {
-
+                this.Name = name;
             }
         }
         public static ushort GetFreePort(int startPort)
